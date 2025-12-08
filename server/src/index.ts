@@ -1,13 +1,16 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
 import { startTokenExpiryScheduler } from './utils/scheduler';
+import ClientWebSocketServer from './services/ClientWebSocketServer';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
 import tokensRouter from './routes/tokens';
+import marketDataRouter from './routes/marketData';
 
 dotenv.config();
 
@@ -35,6 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/tokens', tokensRouter);
+app.use('/api/market-data', marketDataRouter);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -45,7 +49,8 @@ app.get('/', (_req: Request, res: Response) => {
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
-      tokens: '/api/tokens'
+      tokens: '/api/tokens',
+      marketData: '/api/market-data'
     }
   });
 });
@@ -67,7 +72,13 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-app.listen(PORT, () => {
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize WebSocket server
+ClientWebSocketServer.initialize(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`
   ╔═══════════════════════════════════════╗
   ║        FlowSense Server Running       ║
@@ -75,6 +86,7 @@ app.listen(PORT, () => {
   ║  Port: ${PORT.toString().padEnd(30)}  ║
   ║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(22)}  ║
   ║  Client URL: ${CLIENT_URL.padEnd(24)}  ║
+  ║  WebSocket: Enabled${' '.padEnd(22)}  ║
   ╚═══════════════════════════════════════╝
   `);
 });
