@@ -24,23 +24,41 @@ git push -u origin main
 
 ## Step 2: Deploy Server to Railway
 
-1. Go to https://railway.app
-2. Click "New Project"
-3. Select "Deploy from GitHub repo"
-4. Select your `flowsense` repository
-5. Railway will auto-detect the monorepo structure
-6. Configure the service:
-   - **Root Directory**: `server`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
+### Important: Railway Configuration
 
-7. Add environment variables in Railway:
-   - `PORT`: 8080 (Railway will override this automatically)
-   - `NODE_ENV`: production
-   - `CLIENT_URL`: (will be updated after Vercel deployment)
+Railway needs to know it's a monorepo. Follow these steps carefully:
 
-8. Deploy the service
-9. Copy the deployed URL (e.g., `https://flowsense-server.up.railway.app`)
+1. Go to https://railway.app and sign in with GitHub
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select your `flowsense` repository
+4. Railway will create a service - click on it
+
+### Configure the Service
+
+5. Go to **Settings** tab:
+   - Scroll to **Root Directory**
+   - Set it to: `server`
+   - Click "Update"
+
+6. Go to **Variables** tab and add these environment variables:
+   - `NODE_ENV`: `production`
+   - `CLIENT_URL`: `https://localhost:3000` (temporary - will update after Vercel)
+   - Note: Railway automatically provides `PORT` - don't set it manually
+
+7. Go to **Settings** → **Deploy**:
+   - **Build Command**: Leave empty (will use package.json)
+   - **Start Command**: Leave empty (will use package.json)
+
+8. Click **Deploy** or push a commit to trigger deployment
+
+9. Once deployed, go to **Settings** → **Networking**:
+   - Click "Generate Domain" to get a public URL
+   - Copy this URL (e.g., `https://flowsense-production.up.railway.app`)
+
+### Troubleshooting Railway Deployment
+- If build fails, check the logs in the **Deployments** tab
+- Ensure Root Directory is set to `server`
+- The build will run `npm run build` and start with `npm start` from package.json
 
 ## Step 3: Deploy Client to Vercel
 
