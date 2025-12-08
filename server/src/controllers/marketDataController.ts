@@ -11,7 +11,7 @@ import Candle from '../models/Candle';
 /**
  * Initialize Dhan WebSocket connection for a user
  */
-export const initializeConnection = async (req: Request, res: Response) => {
+export const initializeConnection = async (req: Request, res: Response): Promise<Response> => {
   try {
     const userId = (req as any).user?.userId; // From auth middleware
 
@@ -74,7 +74,7 @@ export const initializeConnection = async (req: Request, res: Response) => {
     // Start paper trading engine
     await PaperTradingEngine.start();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Successfully connected to Dhan market feed and started trading system',
       subscribedInstruments: DhanWebSocketManager.getSubscribedInstruments(),
@@ -85,7 +85,7 @@ export const initializeConnection = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error initializing Dhan connection:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to connect to Dhan market feed',
       error: error.message
@@ -96,12 +96,12 @@ export const initializeConnection = async (req: Request, res: Response) => {
 /**
  * Get connection status
  */
-export const getConnectionStatus = async (req: Request, res: Response) => {
+export const getConnectionStatus = async (_req: Request, res: Response): Promise<Response> => {
   try {
     const isConnected = DhanWebSocketManager.getConnectionStatus();
     const subscribedInstruments = DhanWebSocketManager.getSubscribedInstruments();
 
-    res.json({
+    return res.json({
       success: true,
       isConnected,
       subscribedInstruments,
@@ -110,7 +110,7 @@ export const getConnectionStatus = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error getting connection status:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to get connection status',
       error: error.message
@@ -121,7 +121,7 @@ export const getConnectionStatus = async (req: Request, res: Response) => {
 /**
  * Disconnect from Dhan WebSocket
  */
-export const disconnectFromDhan = async (req: Request, res: Response) => {
+export const disconnectFromDhan = async (_req: Request, res: Response): Promise<Response> => {
   try {
     // Stop paper trading engine
     PaperTradingEngine.stop();
@@ -135,14 +135,14 @@ export const disconnectFromDhan = async (req: Request, res: Response) => {
     // Disconnect from Dhan
     DhanWebSocketManager.disconnect();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Disconnected from Dhan market feed and stopped trading system'
     });
 
   } catch (error: any) {
     console.error('Error disconnecting:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to disconnect',
       error: error.message
@@ -153,7 +153,7 @@ export const disconnectFromDhan = async (req: Request, res: Response) => {
 /**
  * Get latest tick data for a security
  */
-export const getLatestTick = async (req: Request, res: Response) => {
+export const getLatestTick = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { securityId } = req.params;
 
@@ -168,14 +168,14 @@ export const getLatestTick = async (req: Request, res: Response) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       tick: latestTick
     });
 
   } catch (error: any) {
     console.error('Error getting latest tick:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to get tick data',
       error: error.message
@@ -186,7 +186,7 @@ export const getLatestTick = async (req: Request, res: Response) => {
 /**
  * Get candles for a security
  */
-export const getCandles = async (req: Request, res: Response) => {
+export const getCandles = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { securityId } = req.params;
     const { interval = '5m', limit = 100 } = req.query;
@@ -199,7 +199,7 @@ export const getCandles = async (req: Request, res: Response) => {
       .sort({ timestamp: -1 })
       .limit(Number(limit));
 
-    res.json({
+    return res.json({
       success: true,
       candles: candles.reverse(), // Return oldest to newest
       count: candles.length
@@ -207,7 +207,7 @@ export const getCandles = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error getting candles:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to get candle data',
       error: error.message

@@ -15,11 +15,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { ITick } from '../models/Tick';
 import { ISignal } from '../models/Signal';
-import { IPaperOrder } from '../models/PaperOrder';
 import { IPaperPosition } from '../models/PaperPosition';
-import { IPortfolio } from '../models/Portfolio';
 import SignalModel from '../models/Signal';
 import PaperOrderModel from '../models/PaperOrder';
 import PaperPositionModel from '../models/PaperPosition';

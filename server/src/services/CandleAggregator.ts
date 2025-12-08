@@ -264,7 +264,7 @@ class CandleAggregator extends EventEmitter {
   private closeAllCandles(): void {
     console.log(`[CandleAggregator] Closing ${this.activeCandlesMap.size} active candles...`);
 
-    for (const [key, candle] of this.activeCandlesMap.entries()) {
+    for (const [_key, candle] of this.activeCandlesMap.entries()) {
       this.closeCandle(candle);
     }
 

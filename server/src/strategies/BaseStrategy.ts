@@ -9,7 +9,6 @@
  */
 
 import { ICandle } from '../models/Candle';
-import { ISignal } from '../models/Signal';
 import { MarketDepthMetrics } from '../utils/marketDepthMetrics';
 
 export interface Signal {

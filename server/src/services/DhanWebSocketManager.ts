@@ -63,7 +63,6 @@ class DhanWebSocketManager extends EventEmitter {
   private clientId: string = '';
 
   private subscribedInstruments: Set<string> = new Set();
-  private instrumentCache: Map<string, any> = new Map();
 
   constructor() {
     super();

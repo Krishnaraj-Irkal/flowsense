@@ -125,7 +125,7 @@ export class OpeningRangeBreakoutStrategy extends BaseStrategy {
    * Detect breakout above/below opening range
    */
   private detectBreakout(candle: ICandle, depthMetrics: MarketDepthMetrics): Signal | null {
-    const { close, high, low, volume } = candle;
+    const { close, volume } = candle;
 
     // Bullish breakout: Close above opening range high
     if (close > this.openingRangeHigh && !this.hasTradedBullish) {
