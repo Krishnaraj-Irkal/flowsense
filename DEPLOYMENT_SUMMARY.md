@@ -103,6 +103,8 @@ Should return:
    ```
    (Use the Railway URL from Step 1)
 
+   **CRITICAL**: Must include `https://` - Don't use just `your-railway-url.up.railway.app`
+
 6. **Deploy**: Click Deploy
 7. **Wait for Build**: Takes 2-3 minutes
 8. **Get URL**: Copy your Vercel URL (e.g., `https://flowsense.vercel.app`)
@@ -160,7 +162,8 @@ Should return:
 ### Vercel Issues
 - **"Unexpected token '<'"** → See [VERCEL_SETUP.md](VERCEL_SETUP.md)
 - **Build fails** → Check Root Directory is set to `client`
-- **API fails** → Check REACT_APP_API_URL environment variable
+- **Wrong API URL (e.g., vercel-url/railway-url)** → Add `https://` to REACT_APP_API_URL
+- **API fails** → Check REACT_APP_API_URL environment variable includes `https://`
 
 ### CORS Issues
 - Update CLIENT_URL in Railway to match Vercel URL
@@ -210,6 +213,8 @@ CLIENT_URL=https://your-vercel-url.vercel.app
 ```env
 REACT_APP_API_URL=https://your-railway-url.up.railway.app
 ```
+
+**Important**: Always include `https://` prefix!
 
 ---
 

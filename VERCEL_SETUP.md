@@ -43,7 +43,21 @@ Click **Add Environment Variable** and add:
 |------|-------|
 | `REACT_APP_API_URL` | `https://your-railway-url.up.railway.app` |
 
-**Important**: Use your Railway server URL here (from Railway deployment)
+**CRITICAL**:
+- ✅ **MUST** include `https://` at the beginning
+- ✅ **NO** trailing slash at the end
+- ❌ Don't use: `your-railway-url.up.railway.app` (missing protocol)
+- ❌ Don't use: `https://your-railway-url.up.railway.app/` (trailing slash)
+
+**Example**:
+```
+Correct:   https://flowsense-production.up.railway.app
+Wrong:     flowsense-production.up.railway.app
+Wrong:     https://flowsense-production.up.railway.app/
+```
+
+**Why this matters**: Without `https://`, axios treats it as a relative URL and concatenates it with your Vercel domain, causing errors like:
+`https://your-vercel-url.vercel.app/your-railway-url.up.railway.app/api/health` ❌
 
 ### Step 4: Deploy
 
@@ -77,14 +91,23 @@ npm run build
 ls dist  # Should see bundle.[hash].js and index.html
 ```
 
-### Issue 3: Environment Variable Not Set
-**Symptom**: API calls fail, but no syntax error
+### Issue 3: Wrong API URL (Missing Protocol)
+**Symptom**: API calls to malformed URL like `https://vercel-url.vercel.app/railway-url.up.railway.app/api/health`
 **Solution**:
 - Go to Project Settings → Environment Variables
-- Add `REACT_APP_API_URL` with your Railway URL
+- Edit `REACT_APP_API_URL`
+- **Add `https://`** at the beginning: `https://your-railway-url.up.railway.app`
+- Remove any trailing slashes
 - Redeploy from Deployments tab
 
-### Issue 4: Caching Issues
+### Issue 4: Environment Variable Not Set
+**Symptom**: API calls to localhost or default URL
+**Solution**:
+- Go to Project Settings → Environment Variables
+- Add `REACT_APP_API_URL` with your Railway URL (including `https://`)
+- Redeploy from Deployments tab
+
+### Issue 5: Caching Issues
 **Symptom**: Old version loads
 **Solution**:
 - Hard refresh: Ctrl + Shift + R (Windows) or Cmd + Shift + R (Mac)
