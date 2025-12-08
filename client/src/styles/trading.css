@@ -1,0 +1,656 @@
+/**
+ * Trading Components Styles
+ */
+
+/* Portfolio Card */
+.portfolio-card {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-card.loading {
+  text-align: center;
+  padding: 40px;
+}
+
+.portfolio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.portfolio-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pnl-badge {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.pnl-badge.profit {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
+}
+
+.pnl-badge.loss {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.portfolio-section {
+  background: #16213e;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.portfolio-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.portfolio-item .label {
+  color: #8e8e93;
+  font-size: 14px;
+}
+
+.portfolio-item .value {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.portfolio-item .value.available {
+  color: #26a69a;
+}
+
+.portfolio-item .value.used {
+  color: #ff9800;
+}
+
+.portfolio-item .value.profit {
+  color: #26a69a;
+}
+
+.portfolio-item .value.loss {
+  color: #ef5350;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #0f1419;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #26a69a, #1de9b6);
+  transition: width 0.3s ease;
+}
+
+.progress-fill.loss-fill {
+  background: linear-gradient(90deg, #ef5350, #ff6b6b);
+}
+
+.progress-bar.danger .progress-fill {
+  background: linear-gradient(90deg, #ff1744, #ff5252);
+}
+
+.progress-label {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.progress-label.danger {
+  color: #ff5252;
+  font-weight: 600;
+}
+
+.portfolio-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.stat {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profit-stat {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
+}
+
+.loss-stat {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+}
+
+.warning-message {
+  margin-top: 12px;
+  padding: 8px;
+  background: rgba(255, 23, 68, 0.1);
+  border-left: 3px solid #ff1744;
+  border-radius: 4px;
+  color: #ff5252;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Positions List */
+.positions-list {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  color: #e0e0e0;
+}
+
+.positions-list.empty {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #8e8e93;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.positions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.positions-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.positions-count {
+  background: #26a69a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.positions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.position-card {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.position-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.position-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.position-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.side-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.side-badge.long {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
+}
+
+.side-badge.short {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+}
+
+.security-id {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.pnl-value {
+  text-align: right;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.pnl-value.profit {
+  color: #26a69a;
+}
+
+.pnl-value.loss {
+  color: #ef5350;
+}
+
+.pnl-percent {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.position-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-label {
+  color: #8e8e93;
+  font-size: 13px;
+}
+
+.detail-value {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.position-levels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: #0f1419;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.level-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.level-label {
+  font-size: 11px;
+  color: #8e8e93;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.level-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.level-value.sl {
+  color: #ef5350;
+}
+
+.level-value.target {
+  color: #26a69a;
+}
+
+.level-distance {
+  font-size: 11px;
+  color: #8e8e93;
+}
+
+.position-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.entry-time {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+/* Strategy Status */
+.strategy-status {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  color: #e0e0e0;
+}
+
+.strategy-status.empty {
+  text-align: center;
+  padding: 40px;
+}
+
+.strategy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.strategy-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.strategy-count {
+  background: #26a69a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.strategies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.strategy-card {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 16px;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.strategy-card.active {
+  border-color: #26a69a;
+}
+
+.strategy-card.inactive {
+  opacity: 0.6;
+}
+
+.strategy-card-header {
+  margin-bottom: 16px;
+}
+
+.strategy-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.strategy-title h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: rgba(38, 166, 154, 0.2);
+  color: #26a69a;
+}
+
+.status-badge.inactive {
+  background: rgba(142, 142, 147, 0.2);
+  color: #8e8e93;
+}
+
+.strategy-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.detail-item .icon {
+  font-size: 16px;
+}
+
+.detail-item .label {
+  color: #8e8e93;
+}
+
+.detail-item .value {
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.detail-item .value.capitalize {
+  text-transform: capitalize;
+}
+
+.strategy-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #8e8e93;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.metric-item.limit-ok .metric-value {
+  color: #26a69a;
+}
+
+.metric-item.limit-warning .metric-value {
+  color: #ff9800;
+}
+
+.metric-item.limit-reached .metric-value {
+  color: #ef5350;
+}
+
+.trade-limit-bar {
+  width: 100%;
+  height: 4px;
+  background: #0f1419;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.trade-limit-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.trade-limit-fill.limit-ok {
+  background: #26a69a;
+}
+
+.trade-limit-fill.limit-warning {
+  background: #ff9800;
+}
+
+.trade-limit-fill.limit-reached {
+  background: #ef5350;
+}
+
+.limit-warning {
+  padding: 8px;
+  background: rgba(239, 83, 80, 0.1);
+  border-left: 3px solid #ef5350;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #ef5350;
+  font-weight: 500;
+}
+
+/* Live Chart */
+.live-chart {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  color: #e0e0e0;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.interval-selector {
+  display: flex;
+  gap: 8px;
+  background: #16213e;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.interval-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: #8e8e93;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.interval-btn:hover {
+  background: #0f1419;
+  color: #e0e0e0;
+}
+
+.interval-btn.active {
+  background: #26a69a;
+  color: white;
+}
+
+.chart-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chart-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #8e8e93;
+}
+
+.loading-spinner {
+  font-size: 32px;
+  display: block;
+  margin-top: 16px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar styles */
+.positions-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.positions-container::-webkit-scrollbar-track {
+  background: #0f1419;
+  border-radius: 4px;
+}
+
+.positions-container::-webkit-scrollbar-thumb {
+  background: #26a69a;
+  border-radius: 4px;
+}
+
+.positions-container::-webkit-scrollbar-thumb:hover {
+  background: #1de9b6;
+}
