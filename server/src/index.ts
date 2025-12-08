@@ -3,9 +3,19 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import connectDB from './config/database';
+import { startTokenExpiryScheduler } from './utils/scheduler';
 import healthRouter from './routes/health';
+import authRouter from './routes/auth';
+import tokensRouter from './routes/tokens';
 
 dotenv.config();
+
+// Connect to MongoDB
+connectDB();
+
+// Start token expiry scheduler
+startTokenExpiryScheduler();
 
 const app: Application = express();
 const PORT = process.env.PORT || 8080;
@@ -23,6 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/tokens', tokensRouter);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -31,7 +43,9 @@ app.get('/', (_req: Request, res: Response) => {
     description: 'Backend API for Dhan trading platform',
     version: '1.0.0',
     endpoints: {
-      health: '/api/health'
+      health: '/api/health',
+      auth: '/api/auth',
+      tokens: '/api/tokens'
     }
   });
 });
