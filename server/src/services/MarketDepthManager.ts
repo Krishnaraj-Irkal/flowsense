@@ -64,8 +64,10 @@ class MarketDepthManager extends EventEmitter {
   // Store latest depth snapshots
   private depthSnapshots: Map<string, MarketDepth> = new Map();
 
-  // Connection credentials
+  // Connection credentials (stored for reconnection)
+  // @ts-ignore - tickFeedToken stored for potential reconnection logic
   private tickFeedToken: string = '';
+  // @ts-ignore - clientId stored for potential reconnection logic
   private clientId: string = '';
 
   // Ping interval for keepalive
@@ -108,7 +110,7 @@ class MarketDepthManager extends EventEmitter {
           this.emit('error', error);
         });
 
-        this.ws.on('close', (code: number, reason: Buffer) => {
+        this.ws.on('close', (code: number, _reason: Buffer) => {
           console.log(`[MarketDepth] ❌ Connection closed. Code: ${code}`);
           this.isConnected = false;
           this.stopPingPong();
@@ -168,6 +170,7 @@ class MarketDepthManager extends EventEmitter {
       // Parse packet header (12 bytes)
       const feedCode = data.readUInt32LE(0);
       const securityId = data.readUInt32LE(4).toString();
+      // @ts-ignore - packetLength reserved for future validation logic
       const packetLength = data.readUInt32LE(8);
 
       // Feed codes: 41 = Bid, 51 = Ask

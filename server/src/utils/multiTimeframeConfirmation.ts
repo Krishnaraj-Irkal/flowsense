@@ -15,7 +15,6 @@
  * - NEUTRAL: Mixed signals = avoid trading
  */
 
-import { ICandle } from '../models/Candle';
 import CandleModel from '../models/Candle';
 import { calculateEMA } from './indicators';
 
@@ -138,7 +137,6 @@ export class MultiTimeframeConfirmation {
       const latestFast = emaFast[emaFast.length - 1];
       const latestSlow = emaSlow[emaSlow.length - 1];
       const prevFast = emaFast[emaFast.length - 2];
-      const prevSlow = emaSlow[emaSlow.length - 2];
 
       // Determine trend
       // BULLISH: Fast EMA > Slow EMA and fast is rising

@@ -44,6 +44,7 @@ class StrategyEngine extends EventEmitter {
 
   // Signal quality filtering
   private readonly minQualityScore: number = 60; // Only execute signals with quality >= 60/100
+  // @ts-ignore - minQualityScoreMultiTF reserved for future advanced filtering
   private readonly minQualityScoreMultiTF: number = 80; // Higher bar for multi-TF aligned signals
 
   constructor() {

@@ -42,6 +42,7 @@ class PaperTradingEngine extends EventEmitter {
   // Slippage simulation parameters
   private readonly baseSlippageBps: number = 5;        // Base slippage: 0.05% (5 basis points)
   private readonly liquiditySlippageFactor: number = 2; // Extra slippage in low liquidity
+  // @ts-ignore - volatilitySlippageFactor reserved for future volatility-based slippage
   private readonly volatilitySlippageFactor: number = 1.5; // Extra slippage in high volatility
 
   constructor() {

@@ -89,7 +89,7 @@ export const initializeConnection = async (req: Request, res: Response): Promise
 
     // Initialize Option Chain Analyzer with access token
     console.log('[MarketDataController] Initializing Option Chain Analyzer...');
-    OptionChainAnalyzer.initialize(accessToken.accessToken);
+    OptionChainAnalyzer.initialize(accessToken.optionChainToken);
 
     // Fetch option chain data for Nifty (rate limited to 1 call per 3 seconds)
     // We'll set up periodic fetching every 5 minutes
