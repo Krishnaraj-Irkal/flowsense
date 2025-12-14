@@ -22,30 +22,12 @@ startTokenExpiryScheduler();
 
 const app: Application = express();
 const PORT = process.env.PORT || 8080;
-
-// Configure allowed origins for CORS
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:8080',
-  process.env.CLIENT_URL || 'http://localhost:3000'
-].map(url => url.replace(/\/$/, '')); // Remove trailing slashes
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-
-    // Normalize origin by removing trailing slash
-    const normalizedOrigin = origin.replace(/\/$/, '');
-
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
+  origin: CLIENT_URL,
   credentials: true
 }));
 app.use(morgan('dev'));
