@@ -28,6 +28,7 @@ export class EMACrossoverStrategy extends BaseStrategy {
   name = 'EMA Crossover with Depth Filter';
   timeframe: '5m' = '5m';
   tradingType: 'intraday' = 'intraday';
+  protected strategyWeight: number = 0.7; // Lower weight - simpler strategy
 
   // Strategy-specific parameters
   private fastEMAPeriod: number = 9;

@@ -27,6 +27,7 @@ export class OpeningRangeBreakoutStrategy extends BaseStrategy {
   name = 'Opening Range Breakout with Depth Confirmation';
   timeframe: '1m' = '1m';
   tradingType: 'intraday' = 'intraday';
+  protected strategyWeight: number = 1.0; // Standard weight - proven strategy
 
   // Strategy-specific parameters
   private volumeMultiplier: number = 2.0; // Volume must be 2x average for breakout
@@ -283,6 +284,10 @@ export class OpeningRangeBreakoutStrategy extends BaseStrategy {
       return null;
     }
 
+    // Calculate quality score (ORB: 2 confluences - price breakout + volume)
+    const confluences = 2;
+    const qualityScore = this.calculateQualityScore(depthMetrics, confluences, false);
+
     const signal: Signal = {
       type,
       price,
@@ -292,14 +297,19 @@ export class OpeningRangeBreakoutStrategy extends BaseStrategy {
       quantity,
       bidAskImbalance: depthMetrics.bidAskImbalance,
       orderBookStrength: depthMetrics.orderBookStrength,
-      liquidityScore: depthMetrics.liquidityScore
+      liquidityScore: depthMetrics.liquidityScore,
+      qualityScore,
+      strategyWeight: this.strategyWeight,
+      isMultiTimeframeAligned: false // ORB doesn't use multi-TF (too fast)
     };
 
     const riskPerUnit = Math.abs(price - customStopLoss);
     const rewardPerUnit = Math.abs(customTarget - price);
     const actualRR = rewardPerUnit / riskPerUnit;
 
-    console.log(`[${this.name}] ✓ Signal generated: ${type} @ ₹${price.toFixed(2)} | SL: ₹${customStopLoss.toFixed(2)} | Target: ₹${customTarget.toFixed(2)} | R:R = 1:${actualRR.toFixed(1)} | Qty: ${quantity}`);
+    console.log(`[${this.name}] ✓ Signal generated: ${type} @ ₹${price.toFixed(2)}`);
+    console.log(`  SL: ₹${customStopLoss.toFixed(2)} | Target: ₹${customTarget.toFixed(2)} | R:R = 1:${actualRR.toFixed(1)}`);
+    console.log(`  Qty: ${quantity} | Quality: ${qualityScore}/100 | Weight: ${this.strategyWeight}x`);
 
     return signal;
   }

@@ -44,7 +44,7 @@ interface BuildingCandle {
 
 class CandleAggregator extends EventEmitter {
   private activeCandlesMap: Map<string, BuildingCandle> = new Map();
-  private candleIntervals: CandleInterval[] = ['1m', '5m']; // Focus on intraday
+  private candleIntervals: CandleInterval[] = ['1m', '5m', '15m', '1h']; // Multi-timeframe support
   private isStarted: boolean = false;
 
   constructor() {
@@ -94,6 +94,8 @@ class CandleAggregator extends EventEmitter {
    */
   private onTick(tick: EnrichedTick): void {
     const { securityId, ltp, volume, depthMetrics } = tick;
+
+    console.log(`[CandleAggregator] 📊 Received tick for ${securityId}: LTP ₹${ltp}`);
 
     // Process tick for each interval
     for (const interval of this.candleIntervals) {
@@ -145,6 +147,8 @@ class CandleAggregator extends EventEmitter {
     openPrice: number,
     timestamp: Date
   ): BuildingCandle {
+    console.log(`[CandleAggregator] 🕯️  Creating new ${interval} candle for ${securityId} at ${timestamp.toISOString()}, Open: ₹${openPrice}`);
+
     return {
       securityId,
       interval,
@@ -186,6 +190,25 @@ class CandleAggregator extends EventEmitter {
     candle.depthMetricsSum.depthSpread += depthMetrics.depthSpread;
     candle.depthMetricsSum.orderBookStrength += depthMetrics.orderBookStrength;
     candle.tickCount++;
+
+    // Emit live candle update for real-time chart updates
+    const currentDepthMetrics = {
+      bidAskImbalance: candle.tickCount > 0 ? candle.depthMetricsSum.bidAskImbalance / candle.tickCount : 0,
+      depthSpread: candle.tickCount > 0 ? candle.depthMetricsSum.depthSpread / candle.tickCount : 0,
+      orderBookStrength: candle.tickCount > 0 ? candle.depthMetricsSum.orderBookStrength / candle.tickCount : 0
+    };
+
+    this.emit('candle:update', {
+      securityId: candle.securityId,
+      interval: candle.interval,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      volume: candle.volume,
+      timestamp: candle.timestamp,
+      isClosed: false
+    }, currentDepthMetrics);
   }
 
   /**
@@ -238,6 +261,7 @@ class CandleAggregator extends EventEmitter {
       );
 
       // Emit candle close event with depth metrics
+      console.log(`[CandleAggregator] ✅ Emitting candle:close event for ${candle.securityId} ${candle.interval}`);
       this.emit('candle:close', savedCandle, {
         bidAskImbalance: avgBidAskImbalance,
         depthSpread: avgDepthSpread,

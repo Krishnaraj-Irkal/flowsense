@@ -21,6 +21,9 @@ export interface Signal {
   bidAskImbalance: number;
   orderBookStrength: number;
   liquidityScore: number;
+  qualityScore: number;        // 0-100 signal quality
+  strategyWeight: number;       // Weight multiplier for this strategy
+  isMultiTimeframeAligned: boolean; // MTF confirmation
 }
 
 export abstract class BaseStrategy {
@@ -46,6 +49,11 @@ export abstract class BaseStrategy {
   protected maxTradesPerDay?: number;
   protected tradesPlacedToday: number = 0;
 
+  // Strategy weighting (for signal prioritization)
+  // Higher weight = more capital allocated, more trusted signals
+  // EMA Crossover: 0.7, ORB: 1.0, Smart Money: 1.5
+  protected strategyWeight: number = 1.0;
+
   /**
    * Abstract method to be implemented by each strategy
    * Called when a new candle closes
@@ -54,7 +62,7 @@ export abstract class BaseStrategy {
    * @param depthMetrics - Market depth metrics averaged over candle period
    * @returns Signal object if conditions met, null otherwise
    */
-  abstract onCandle(candle: ICandle, depthMetrics: MarketDepthMetrics): Signal | null;
+  abstract onCandle(candle: ICandle, depthMetrics: MarketDepthMetrics): Signal | null | Promise<Signal | null>;
 
   /**
    * Generate a trading signal with market depth filtering
@@ -64,18 +72,24 @@ export abstract class BaseStrategy {
    * 2. Liquidity requirements (avoid low liquidity periods)
    * 3. Position sizing based on risk percentage
    * 4. Stop loss and target calculation (1:3 R:R)
+   * 5. Signal quality scoring (0-100)
+   * 6. Multi-timeframe confirmation check
    *
    * @param type - BUY or SELL
    * @param price - Entry price
    * @param reason - Why this signal was generated
    * @param depthMetrics - Current market depth metrics
+   * @param confluences - Number of confluences met (for quality scoring)
+   * @param isMultiTFAligned - Whether multi-timeframe is aligned
    * @returns Signal object if all filters pass, null if rejected
    */
   protected generateSignal(
     type: 'BUY' | 'SELL',
     price: number,
     reason: string,
-    depthMetrics: MarketDepthMetrics
+    depthMetrics: MarketDepthMetrics,
+    confluences: number = 1,
+    isMultiTFAligned: boolean = false
   ): Signal | null {
     // Filter 1: Check bid-ask imbalance
     if (type === 'BUY') {
@@ -119,8 +133,17 @@ export abstract class BaseStrategy {
     const stopLoss = this.calculateStopLoss(type, price);
     const target = this.calculateTarget(type, price);
 
+    // Calculate quality score (0-100)
+    const qualityScore = this.calculateQualityScore(
+      depthMetrics,
+      confluences,
+      isMultiTFAligned
+    );
+
     // All filters passed - generate signal
-    console.log(`[${this.name}] ✓ Signal generated: ${type} @ ₹${price.toFixed(2)} | SL: ₹${stopLoss.toFixed(2)} | Target: ₹${target.toFixed(2)} | Qty: ${quantity}`);
+    console.log(`[${this.name}] ✓ Signal generated: ${type} @ ₹${price.toFixed(2)}`);
+    console.log(`  SL: ₹${stopLoss.toFixed(2)} | Target: ₹${target.toFixed(2)} | Qty: ${quantity}`);
+    console.log(`  Quality Score: ${qualityScore}/100 | Weight: ${this.strategyWeight}x | MTF Aligned: ${isMultiTFAligned ? '✅' : '❌'}`);
 
     return {
       type,
@@ -131,8 +154,47 @@ export abstract class BaseStrategy {
       quantity,
       bidAskImbalance: depthMetrics.bidAskImbalance,
       orderBookStrength: depthMetrics.orderBookStrength,
-      liquidityScore: depthMetrics.liquidityScore
+      liquidityScore: depthMetrics.liquidityScore,
+      qualityScore,
+      strategyWeight: this.strategyWeight,
+      isMultiTimeframeAligned: isMultiTFAligned
     };
+  }
+
+  /**
+   * Calculate signal quality score (0-100)
+   *
+   * Factors:
+   * - Market depth quality (30 points)
+   * - Number of confluences (30 points)
+   * - Multi-timeframe alignment (40 points)
+   *
+   * @param depthMetrics - Market depth metrics
+   * @param confluences - Number of confluences (max 5)
+   * @param isMultiTFAligned - Multi-timeframe alignment
+   * @returns Quality score 0-100
+   */
+  protected calculateQualityScore(
+    depthMetrics: MarketDepthMetrics,
+    confluences: number,
+    isMultiTFAligned: boolean
+  ): number {
+    let score = 0;
+
+    // 1. Market depth quality (30 points max)
+    const liquidityPoints = Math.min(30, (depthMetrics.liquidityScore / 100) * 30);
+    score += liquidityPoints;
+
+    // 2. Confluences (30 points max, assuming max 5 confluences)
+    const confluencePoints = Math.min(30, (confluences / 5) * 30);
+    score += confluencePoints;
+
+    // 3. Multi-timeframe alignment (40 points - highest weight)
+    if (isMultiTFAligned) {
+      score += 40;
+    }
+
+    return Math.round(score);
   }
 
   /**

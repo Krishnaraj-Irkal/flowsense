@@ -152,10 +152,46 @@ export const MarketDataProvider: React.FC<MarketDataProviderProps> = ({ children
 
     // Tick updates
     const handleTick = (data: Tick) => {
+      console.log(`[MarketDataContext] 📊 Tick received for ${data.securityId}: LTP ₹${data.ltp}`);
       setLatestTick(data);
     };
 
-    // Candle updates
+    // Live candle updates (real-time updates as ticks come in)
+    const handleCandleUpdate = (data: { candle: Candle }) => {
+      const candle = data.candle;
+      setLatestCandle(candle);
+
+      // Update the latest candle in the array (replace last candle if it's the same timestamp)
+      if (candle.interval === '1m') {
+        setCandles1m((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].timestamp === candle.timestamp) {
+            // Update existing candle
+            const updated = [...prev];
+            updated[updated.length - 1] = candle;
+            return updated;
+          } else {
+            // Add new candle
+            const updated = [...prev, candle];
+            return updated.slice(-100);
+          }
+        });
+      } else if (candle.interval === '5m') {
+        setCandles5m((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].timestamp === candle.timestamp) {
+            // Update existing candle
+            const updated = [...prev];
+            updated[updated.length - 1] = candle;
+            return updated;
+          } else {
+            // Add new candle
+            const updated = [...prev, candle];
+            return updated.slice(-100);
+          }
+        });
+      }
+    };
+
+    // Candle close (when a candle period completes)
     const handleCandle = (data: { candle: Candle }) => {
       const candle = data.candle;
       setLatestCandle(candle);
@@ -222,6 +258,7 @@ export const MarketDataProvider: React.FC<MarketDataProviderProps> = ({ children
     marketDataService.on('connection:status', handleConnectionStatus);
     marketDataService.on('status', handleSystemStatus);
     marketDataService.on('tick', handleTick);
+    marketDataService.on('candle:update', handleCandleUpdate);
     marketDataService.on('candle', handleCandle);
     marketDataService.on('signal', handleSignal);
     marketDataService.on('strategies:status', handleStrategiesStatus);
@@ -235,6 +272,7 @@ export const MarketDataProvider: React.FC<MarketDataProviderProps> = ({ children
       marketDataService.off('connection:status', handleConnectionStatus);
       marketDataService.off('status', handleSystemStatus);
       marketDataService.off('tick', handleTick);
+      marketDataService.off('candle:update', handleCandleUpdate);
       marketDataService.off('candle', handleCandle);
       marketDataService.off('signal', handleSignal);
       marketDataService.off('strategies:status', handleStrategiesStatus);

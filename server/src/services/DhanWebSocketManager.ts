@@ -20,6 +20,50 @@ import {
 import { calculateDepthMetrics, MarketDepthMetrics } from '../utils/marketDepthMetrics';
 import Tick from '../models/Tick';
 
+// Helper function to check if market is currently open
+function isMarketOpen(): { open: boolean; message: string } {
+  const now = new Date();
+
+  // Convert to IST (UTC+5:30)
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset);
+
+  const day = istTime.getUTCDay(); // 0 = Sunday, 6 = Saturday
+  const hours = istTime.getUTCHours();
+  const minutes = istTime.getUTCMinutes();
+  const timeInMinutes = hours * 60 + minutes;
+
+  // Market hours: 9:15 AM to 3:30 PM IST, Monday to Friday
+  const marketOpen = 9 * 60 + 15; // 9:15 AM = 555 minutes
+  const marketClose = 15 * 60 + 30; // 3:30 PM = 930 minutes
+
+  if (day === 0 || day === 6) {
+    return {
+      open: false,
+      message: `Market is CLOSED (Weekend). Current IST time: ${istTime.toISOString().slice(11, 19)} IST`
+    };
+  }
+
+  if (timeInMinutes < marketOpen) {
+    return {
+      open: false,
+      message: `Market is CLOSED (Pre-market). Current IST time: ${istTime.toISOString().slice(11, 19)} IST. Market opens at 9:15 AM IST`
+    };
+  }
+
+  if (timeInMinutes > marketClose) {
+    return {
+      open: false,
+      message: `Market is CLOSED (Post-market). Current IST time: ${istTime.toISOString().slice(11, 19)} IST. Market closed at 3:30 PM IST`
+    };
+  }
+
+  return {
+    open: true,
+    message: `Market is OPEN. Current IST time: ${istTime.toISOString().slice(11, 19)} IST`
+  };
+}
+
 // Subscription request structure
 interface SubscriptionRequest {
   RequestCode: number;
@@ -76,16 +120,27 @@ class DhanWebSocketManager extends EventEmitter {
     this.clientId = clientId;
 
     const wsUrl = `wss://api-feed.dhan.co?version=2&token=${tickFeedToken}&clientId=${clientId}&authType=2`;
-    console.log(`[DhanWS] Connecting to Dhan WebSocket... ${wsUrl}`);
+    console.log(`[DhanWS] Connecting to Dhan WebSocket...`);
+    console.log(`[DhanWS] Token: ${tickFeedToken.substring(0, 20)}...`);
+    console.log(`[DhanWS] ClientId: ${clientId}`);
 
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(wsUrl);
         console.log('[DhanWS] WebSocket instance created', this.ws);
         this.ws.on('open', () => {
-          console.log('[DhanWS] Connected to Dhan market feed');
+          console.log('[DhanWS] ✅ Connected to Dhan market feed');
           this.isConnected = true;
           this.reconnectAttempts = 0;
+
+          // Check and display market status
+          const marketStatus = isMarketOpen();
+          if (!marketStatus.open) {
+            console.warn(`[DhanWS] ⚠️  ${marketStatus.message}`);
+            console.warn(`[DhanWS] ⚠️  Note: Dhan will NOT send tick data when market is closed!`);
+          } else {
+            console.log(`[DhanWS] ✅ ${marketStatus.message}`);
+          }
 
           // Start ping-pong to keep connection alive
           this.startPingPong();
@@ -95,27 +150,61 @@ class DhanWebSocketManager extends EventEmitter {
         });
 
         this.ws.on('message', (data: Buffer) => {
+          console.log(`[DhanWS] 📨 Message received from server - Size: ${data.length} bytes`);
+          console.log(`[DhanWS] 📨 First 20 bytes (hex): ${data.slice(0, 20).toString('hex')}`);
           this.handleMessage(data);
         });
 
         this.ws.on('ping', (data: Buffer) => {
+          console.log('[DhanWS] 🏓 PING received from server');
           // Respond to server ping with pong
           if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.pong(data);
+            console.log('[DhanWS] 🏓 PONG sent to server');
           }
         });
 
+        this.ws.on('pong', () => {
+          console.log('[DhanWS] 🏓 PONG received from server (response to our ping)');
+        });
+
         this.ws.on('error', (error: Error) => {
-          console.error('[DhanWS] WebSocket error:', error);
+          console.error('[DhanWS] ❌ WebSocket error:', error);
           this.emit('error', error);
         });
 
-        this.ws.on('close', (code: number, reason: string) => {
-          console.log(`[DhanWS] Connection closed. Code: ${code}, Reason: ${reason}`);
+        this.ws.on('close', (code: number, reason: Buffer) => {
+          const reasonStr = reason.toString();
+          console.log(`[DhanWS] ❌ Connection closed. Code: ${code}, Reason: ${reasonStr || 'No reason provided'}`);
+
+          // Common WebSocket close codes
+          const closeReasons: { [key: number]: string } = {
+            1000: 'Normal closure',
+            1001: 'Going away',
+            1002: 'Protocol error',
+            1003: 'Unsupported data',
+            1006: 'Abnormal closure (no close frame)',
+            1007: 'Invalid frame payload data',
+            1008: 'Policy violation',
+            1009: 'Message too big',
+            1010: 'Missing extension',
+            1011: 'Internal server error',
+            1015: 'TLS handshake failed'
+          };
+
+          console.log(`[DhanWS] Close code meaning: ${closeReasons[code] || 'Unknown'}`);
+
+          if (code === 1006) {
+            console.error('[DhanWS] ⚠️  Code 1006 usually indicates:');
+            console.error('[DhanWS]    1. Invalid authentication (wrong token/clientId)');
+            console.error('[DhanWS]    2. Network issue preventing proper connection');
+            console.error('[DhanWS]    3. Server rejected the connection');
+          }
+
           this.isConnected = false;
           this.stopPingPong();
 
-          this.emit('disconnected', { code, reason });
+          this.emit('disconnected', { code, reason: reasonStr });
 
           // Attempt reconnection
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -141,6 +230,8 @@ class DhanWebSocketManager extends EventEmitter {
       throw new Error('WebSocket not connected');
     }
 
+    console.log(`[DhanWS] 📡 Subscribing to ${instruments.length} instruments...`);
+
     // Dhan allows max 100 instruments per subscription request
     const batchSize = 100;
 
@@ -148,7 +239,7 @@ class DhanWebSocketManager extends EventEmitter {
       const batch = instruments.slice(i, i + batchSize);
 
       const subscriptionRequest: SubscriptionRequest = {
-        RequestCode: 15, // Subscribe to Full Packet (code 8)
+        RequestCode: 15, // RequestCode 15 = Ticker packets (code 2) - LTP only, trying this for index instruments
         InstrumentCount: batch.length,
         InstrumentList: batch.map(inst => ({
           ExchangeSegment: inst.exchangeSegment,
@@ -156,18 +247,34 @@ class DhanWebSocketManager extends EventEmitter {
         }))
       };
 
+      console.log(`[DhanWS] Sending subscription request:`, JSON.stringify(subscriptionRequest, null, 2));
+      console.log(`[DhanWS] WebSocket readyState BEFORE send: ${this.ws.readyState} (1=OPEN)`);
+
       // Send JSON subscription request
       this.ws.send(JSON.stringify(subscriptionRequest));
+
+      console.log(`[DhanWS] WebSocket readyState AFTER send: ${this.ws.readyState} (1=OPEN)`);
+      console.log(`[DhanWS] Subscription message sent successfully`);
 
       // Track subscribed instruments
       batch.forEach(inst => {
         this.subscribedInstruments.add(inst.securityId);
       });
 
-      console.log(`[DhanWS] Subscribed to ${batch.length} instruments (batch ${Math.floor(i / batchSize) + 1})`);
+      console.log(`[DhanWS] ✅ Subscribed to ${batch.length} instruments (batch ${Math.floor(i / batchSize) + 1})`);
+
+      // Check market status
+      const marketStatus = isMarketOpen();
+      if (!marketStatus.open) {
+        console.warn(`[DhanWS] ⚠️  ${marketStatus.message}`);
+        console.warn(`[DhanWS] ⚠️  Dhan will NOT send data when market is closed!`);
+      } else {
+        console.log(`[DhanWS] ✅ ${marketStatus.message}`);
+        console.log(`[DhanWS] 🎯 Waiting for data packets...`);
+      }
     }
 
-    console.log(`[DhanWS] Total subscribed instruments: ${this.subscribedInstruments.size}`);
+    console.log(`[DhanWS] ✅ Total subscribed instruments: ${this.subscribedInstruments.size}`);
   }
 
   /**
@@ -214,6 +321,7 @@ class DhanWebSocketManager extends EventEmitter {
       }
 
       const { feedCode, securityId } = packet;
+      console.log(`[DhanWS] 📦 Packet received - Code: ${feedCode}, SecurityId: ${securityId}`);
 
       switch (feedCode) {
         case FeedResponseCode.FULL:
@@ -293,17 +401,91 @@ class DhanWebSocketManager extends EventEmitter {
   /**
    * Handle Quote Packet (code 4) - Less comprehensive than Full
    */
-  private handleQuotePacket(packet: QuotePacket): void {
-    // For now, we prioritize Full Packets
-    // Quote packets can be used as fallback if Full packets aren't available
-    console.log(`[DhanWS] Quote packet received for ${packet.securityId}: LTP ₹${packet.ltp}`);
+  private async handleQuotePacket(packet: QuotePacket): Promise<void> {
+    try {
+      console.log(`[DhanWS] Quote packet received for ${packet.securityId}: LTP ₹${packet.ltp}`);
+
+      // Quote packets don't have market depth, so calculate simple metrics from buy/sell totals
+      const totalQty = packet.totalBuyQty + packet.totalSellQty;
+      const bidAskImbalance = totalQty > 0
+        ? ((packet.totalBuyQty - packet.totalSellQty) / totalQty) * 100
+        : 0;
+
+      const depthMetrics = {
+        bidAskImbalance,
+        depthSpread: 0, // Not available without market depth
+        orderBookStrength: 0, // Not available without market depth
+        volumeDelta: 0, // Not available in quote packet
+        liquidityScore: totalQty / 1000 // Simple liquidity score based on total quantity
+      };
+
+      // Create enriched tick from quote packet
+      const enrichedTick: EnrichedTick = {
+        securityId: packet.securityId,
+        ltp: packet.ltp,
+        ltq: packet.ltq,
+        ltt: new Date(packet.ltt * 1000),
+        volume: packet.volume,
+        totalBuyQty: packet.totalBuyQty,
+        totalSellQty: packet.totalSellQty,
+        open: packet.open,
+        high: packet.high,
+        low: packet.low,
+        close: packet.close,
+        atp: packet.atp,
+        depthMetrics,
+        timestamp: new Date()
+      };
+
+      // Emit tick event for other services
+      this.emit('tick', enrichedTick);
+
+      console.log(`[DhanWS] ✅ Emitted quote data for ${packet.securityId}`);
+
+    } catch (error) {
+      console.error('[DhanWS] Error handling quote packet:', error);
+    }
   }
 
   /**
    * Handle Ticker Packet (code 2) - Basic LTP data
    */
-  private handleTickerPacket(packet: TickerPacket): void {
-    console.log(`[DhanWS] Ticker packet received for ${packet.securityId}: LTP ₹${packet.ltp}`);
+  private async handleTickerPacket(packet: TickerPacket): Promise<void> {
+    try {
+      console.log(`[DhanWS] Ticker packet received for ${packet.securityId}: LTP ₹${packet.ltp}`);
+
+      // Create a simplified tick from ticker packet (doesn't have market depth)
+      const simplifiedTick: EnrichedTick = {
+        securityId: packet.securityId,
+        ltp: packet.ltp,
+        ltq: 0, // Not available in ticker packet
+        ltt: new Date(packet.ltt * 1000),
+        volume: 0,
+        totalBuyQty: 0,
+        totalSellQty: 0,
+        open: 0,
+        high: 0,
+        low: 0,
+        close: 0,
+        atp: 0,
+        depthMetrics: {
+          bidAskImbalance: 0,
+          depthSpread: 0,
+          orderBookStrength: 0,
+          volumeDelta: 0,
+          liquidityScore: 0
+        },
+        timestamp: new Date()
+      };
+
+      // Emit tick event for other services
+      this.emit('tick', simplifiedTick);
+
+      console.log(`[DhanWS] ✅ Emitted ticker data for ${packet.securityId}`);
+
+    } catch (error) {
+      console.error('[DhanWS] Error handling ticker packet:', error);
+    }
   }
 
   /**
@@ -367,10 +549,14 @@ class DhanWebSocketManager extends EventEmitter {
    * Dhan requires response within 40 seconds
    */
   private startPingPong(): void {
+    console.log('[DhanWS] 🏓 Starting ping-pong keepalive (every 30 seconds)');
     // Send ping every 30 seconds (well within 40 second timeout)
     this.pingInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        console.log('[DhanWS] 🏓 Sending PING to server (keepalive)');
         this.ws.ping();
+      } else {
+        console.warn(`[DhanWS] ⚠️  Cannot send ping, WebSocket readyState: ${this.ws?.readyState}`);
       }
     }, 30000);
   }

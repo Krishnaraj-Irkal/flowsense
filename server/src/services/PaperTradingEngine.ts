@@ -39,6 +39,11 @@ class PaperTradingEngine extends EventEmitter {
   // Default user ID (will be replaced when multi-user support is added)
   private defaultUserId: string | null = null;
 
+  // Slippage simulation parameters
+  private readonly baseSlippageBps: number = 5;        // Base slippage: 0.05% (5 basis points)
+  private readonly liquiditySlippageFactor: number = 2; // Extra slippage in low liquidity
+  private readonly volatilitySlippageFactor: number = 1.5; // Extra slippage in high volatility
+
   constructor() {
     super();
   }
@@ -46,13 +51,18 @@ class PaperTradingEngine extends EventEmitter {
   /**
    * Initialize and start the Paper Trading Engine
    */
-  async start(): Promise<void> {
+  async start(userId?: string): Promise<void> {
     if (this.isRunning) {
       console.log('[PaperTradingEngine] Already running');
       return;
     }
 
     console.log('[PaperTradingEngine] Starting Paper Trading Engine...');
+
+    // Set default user ID if provided
+    if (userId) {
+      this.defaultUserId = userId;
+    }
 
     // Initialize default user portfolio (if doesn't exist)
     await this.initializeDefaultPortfolio();
@@ -99,12 +109,18 @@ class PaperTradingEngine extends EventEmitter {
    */
   private async initializeDefaultPortfolio(): Promise<void> {
     try {
-      // For now, create a single portfolio for testing
-      // TODO: Link to actual user when authentication context is available
-      let portfolio = await PortfolioModel.findOne({});
+      if (!this.defaultUserId) {
+        console.warn('[PaperTradingEngine] No userId provided, skipping portfolio initialization');
+        return;
+      }
+
+      // Find or create portfolio for this user
+      let portfolio = await PortfolioModel.findOne({ userId: this.defaultUserId });
 
       if (!portfolio) {
+        console.log(`[PaperTradingEngine] Creating new portfolio for user ${this.defaultUserId}`);
         portfolio = await PortfolioModel.create({
+          userId: this.defaultUserId,
           totalCapital: 20000,
           availableCapital: 20000,
           usedMargin: 0,
@@ -172,8 +188,14 @@ class PaperTradingEngine extends EventEmitter {
    */
   private async executeSignal(signal: ISignal): Promise<void> {
     try {
+      if (!this.defaultUserId) {
+        console.error('[PaperTradingEngine] No userId available');
+        await this.rejectSignal(signal._id, 'No userId available');
+        return;
+      }
+
       // Get portfolio
-      const portfolio = await PortfolioModel.findById(this.defaultUserId);
+      const portfolio = await PortfolioModel.findOne({ userId: this.defaultUserId });
 
       if (!portfolio) {
         console.error('[PaperTradingEngine] Portfolio not found');
@@ -196,10 +218,17 @@ class PaperTradingEngine extends EventEmitter {
         return;
       }
 
-      // Simulate order execution (use signal price as execution price)
-      const executionPrice = signal.price;
+      // Simulate order execution WITH SLIPPAGE
+      const executionPrice = this.calculateExecutionPriceWithSlippage(
+        signal.price,
+        signal.type,
+        signal.liquidityScore,
+        signal.quantity
+      );
 
+      const slippagePct = ((executionPrice - signal.price) / signal.price) * 100;
       console.log(`[PaperTradingEngine] ✓ Executing paper order: ${signal.type} ${signal.quantity} @ ₹${executionPrice.toFixed(2)}`);
+      console.log(`  Signal Price: ₹${signal.price.toFixed(2)} | Slippage: ${slippagePct >= 0 ? '+' : ''}${slippagePct.toFixed(3)}%`);
 
       // Create paper order
       const order = await PaperOrderModel.create({
@@ -386,7 +415,7 @@ class PaperTradingEngine extends EventEmitter {
       });
 
       // Update portfolio
-      const portfolio = await PortfolioModel.findById(position.userId);
+      const portfolio = await PortfolioModel.findOne({ userId: position.userId });
 
       if (portfolio) {
         // Return capital
@@ -492,6 +521,70 @@ class PaperTradingEngine extends EventEmitter {
       isRunning: this.isRunning,
       openPositions: this.openPositions.size
     };
+  }
+
+  /**
+   * Calculate realistic execution price with slippage simulation
+   *
+   * Slippage factors:
+   * 1. Base slippage: 0.05% (5 bps) - normal market conditions
+   * 2. Liquidity penalty: Extra slippage in low liquidity (score < 70)
+   * 3. Order size impact: Larger orders get more slippage
+   * 4. Direction: BUY gets worse fill (higher), SELL gets worse fill (lower)
+   *
+   * Formula:
+   * Slippage = Base + Liquidity Factor + Size Factor
+   * Execution Price = Signal Price × (1 ± Slippage%)
+   *
+   * @param signalPrice - Ideal entry price from strategy
+   * @param orderType - BUY or SELL
+   * @param liquidityScore - Market liquidity 0-100
+   * @param quantity - Order quantity
+   * @returns Realistic execution price after slippage
+   */
+  private calculateExecutionPriceWithSlippage(
+    signalPrice: number,
+    orderType: 'BUY' | 'SELL',
+    liquidityScore: number,
+    quantity: number
+  ): number {
+    // 1. Base slippage (always present)
+    let slippageBps = this.baseSlippageBps; // 5 bps = 0.05%
+
+    // 2. Liquidity penalty
+    if (liquidityScore < 70) {
+      // Low liquidity = more slippage
+      const liquidityPenalty = ((70 - liquidityScore) / 70) * this.liquiditySlippageFactor;
+      slippageBps += liquidityPenalty;
+    }
+
+    // 3. Order size impact (Nifty lot size = 75, assume larger orders = more impact)
+    const lots = quantity / 75;
+    if (lots > 1) {
+      // Each additional lot adds 0.5 bps
+      const sizeImpact = (lots - 1) * 0.5;
+      slippageBps += sizeImpact;
+    }
+
+    // 4. Add small random component (±0.5 bps) for realism
+    const randomComponent = (Math.random() - 0.5); // -0.5 to +0.5
+    slippageBps += randomComponent;
+
+    // Convert basis points to percentage
+    const slippagePct = slippageBps / 100; // e.g., 5 bps = 0.05%
+
+    // Apply slippage in unfavorable direction
+    let executionPrice: number;
+    if (orderType === 'BUY') {
+      // BUY: Pay higher than signal price (unfavorable)
+      executionPrice = signalPrice * (1 + slippagePct / 100);
+    } else {
+      // SELL: Receive lower than signal price (unfavorable)
+      executionPrice = signalPrice * (1 - slippagePct / 100);
+    }
+
+    // Round to 2 decimals
+    return Math.round(executionPrice * 100) / 100;
   }
 }
 

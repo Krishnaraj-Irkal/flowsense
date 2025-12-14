@@ -141,15 +141,33 @@ class ClientWebSocketServer {
   }
 
   /**
+   * Get number of clients in a room
+   */
+  private getClientsInRoom(room: string): number {
+    if (!this.io) return 0;
+    const roomClients = this.io.sockets.adapter.rooms.get(room);
+    return roomClients ? roomClients.size : 0;
+  }
+
+  /**
    * Subscribe to backend events and broadcast to clients
    */
   private subscribeToBackendEvents(): void {
     // Tick updates
     DhanWebSocketManager.on('tick', (tick) => {
+      console.log(`[ClientWebSocketServer] Broadcasting tick for ${tick.securityId}: LTP ₹${tick.ltp} to ${this.getClientsInRoom('ticks')} clients`);
       this.broadcast('ticks', 'tick', tick);
     });
 
-    // Candle updates
+    // Live candle updates (every tick)
+    CandleAggregator.on('candle:update', (candle, depthMetrics) => {
+      this.broadcast('candles', 'candle:update', {
+        candle,
+        depthMetrics
+      });
+    });
+
+    // Candle close events (when candle completes)
     CandleAggregator.on('candle:close', (candle, depthMetrics) => {
       this.broadcast('candles', 'candle', {
         candle,

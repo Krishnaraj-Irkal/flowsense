@@ -11,6 +11,12 @@ export interface ISignal extends Document {
   // Market depth context at signal generation
   bidAskImbalance: number;
   orderBookStrength: number;
+  liquidityScore: number;
+
+  // Signal quality metrics
+  qualityScore: number;              // 0-100 signal quality
+  strategyWeight: number;             // Weight multiplier for this strategy
+  isMultiTimeframeAligned: boolean;   // Multi-timeframe confirmation
 
   // Risk parameters (1:3 R:R)
   stopLoss: number;
@@ -71,6 +77,30 @@ const SignalSchema = new Schema<ISignal>({
   orderBookStrength: {
     type: Number,
     required: true
+  },
+  liquidityScore: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+
+  // Signal quality metrics
+  qualityScore: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  strategyWeight: {
+    type: Number,
+    required: true,
+    default: 1.0
+  },
+  isMultiTimeframeAligned: {
+    type: Boolean,
+    required: true,
+    default: false
   },
 
   // Risk parameters

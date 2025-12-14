@@ -178,10 +178,16 @@ class MarketDataService {
 
     // Tick updates
     this.socket.on('tick', (data: Tick) => {
+      console.log(`[MarketDataService] Received tick:`, data);
       this.emit('tick', data);
     });
 
-    // Candle updates
+    // Live candle updates (real-time)
+    this.socket.on('candle:update', (data: { candle: Candle; depthMetrics: any }) => {
+      this.emit('candle:update', data);
+    });
+
+    // Candle close updates (when candle completes)
     this.socket.on('candle', (data: { candle: Candle; depthMetrics: any }) => {
       this.emit('candle', data);
     });
@@ -224,7 +230,7 @@ class MarketDataService {
     }
 
     this.socket.emit(`subscribe:${stream}`);
-    console.log(`[MarketDataService] Subscribed to ${stream}`);
+    console.log(`[MarketDataService] ✅ Sent subscription request for: ${stream}`);
   }
 
   /**

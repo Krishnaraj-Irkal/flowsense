@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import DhanWebSocketManager from '../services/DhanWebSocketManager';
+import MarketDepthManager from '../services/MarketDepthManager';
+import OptionChainAnalyzer from '../services/OptionChainAnalyzer';
 import CandleAggregator from '../services/CandleAggregator';
 import StrategyEngine from '../services/StrategyEngine';
 import PaperTradingEngine from '../services/PaperTradingEngine';
@@ -32,8 +34,13 @@ export const initializeConnection = async (req: Request, res: Response): Promise
       });
     }
 
+    console.log(`[MarketDataController] Found access token for user ${userId}`);
+    console.log(`[MarketDataController] Token expires at: ${accessToken.expiresAt}`);
+    console.log(`[MarketDataController] Current time: ${new Date()}`);
+
     // Check if token is expired
     if (new Date() > accessToken.expiresAt) {
+      console.error(`[MarketDataController] ❌ Token expired!`);
       return res.status(401).json({
         success: false,
         message: 'Dhan tokens expired. Please update tokens in settings.'
@@ -50,6 +57,8 @@ export const initializeConnection = async (req: Request, res: Response): Promise
       });
     }
 
+    console.log(`[MarketDataController] Client ID: ${user.clientId}`);
+
     // Check if already connected
     if (DhanWebSocketManager.getConnectionStatus()) {
       return res.json({
@@ -65,6 +74,55 @@ export const initializeConnection = async (req: Request, res: Response): Promise
     // Subscribe to Nifty 50
     await DhanWebSocketManager.subscribeToNifty50();
 
+    // Connect Market Depth Manager for 20-level order book
+    console.log('[MarketDataController] Connecting to Market Depth feed...');
+    await MarketDepthManager.connect(accessToken.tickFeedToken, user.clientId);
+
+    // Subscribe to market depth for Nifty 50 (security ID: 26000)
+    await MarketDepthManager.subscribeToInstruments([
+      {
+        exchangeSegment: 'IDX_I',
+        securityId: '26000'
+      }
+    ]);
+    console.log('[MarketDataController] ✅ Market Depth connected and subscribed');
+
+    // Initialize Option Chain Analyzer with access token
+    console.log('[MarketDataController] Initializing Option Chain Analyzer...');
+    OptionChainAnalyzer.initialize(accessToken.accessToken);
+
+    // Fetch option chain data for Nifty (rate limited to 1 call per 3 seconds)
+    // We'll set up periodic fetching every 5 minutes
+    const fetchOptionChainData = async () => {
+      try {
+        const expiries = await OptionChainAnalyzer.fetchExpiryList('26000', 'IDX_I');
+        if (expiries.length > 0) {
+          // Use nearest expiry
+          const nearestExpiry = expiries[0];
+          console.log(`[MarketDataController] Fetching option chain for expiry: ${nearestExpiry}`);
+
+          // Get current Nifty price from latest tick
+          const latestTick = await Tick.findOne({ securityId: '26000' })
+            .sort({ timestamp: -1 })
+            .limit(1);
+
+          const currentPrice = latestTick?.ltp || 25000; // Default fallback
+
+          await OptionChainAnalyzer.analyzeOptionChain('26000', 'IDX_I', nearestExpiry, currentPrice);
+          console.log('[MarketDataController] ✅ Option chain data fetched and analyzed');
+        }
+      } catch (error: any) {
+        console.error('[MarketDataController] Error fetching option chain:', error.message);
+      }
+    };
+
+    // Initial fetch
+    await fetchOptionChainData();
+
+    // Set up periodic fetching every 5 minutes
+    setInterval(fetchOptionChainData, 5 * 60 * 1000);
+    console.log('[MarketDataController] ✅ Option Chain periodic fetching started (every 5 minutes)');
+
     // Start candle aggregator
     CandleAggregator.start();
 
@@ -72,7 +130,7 @@ export const initializeConnection = async (req: Request, res: Response): Promise
     StrategyEngine.start();
 
     // Start paper trading engine
-    await PaperTradingEngine.start();
+    await PaperTradingEngine.start(userId);
 
     return res.json({
       success: true,
@@ -131,6 +189,9 @@ export const disconnectFromDhan = async (_req: Request, res: Response): Promise<
 
     // Stop candle aggregator
     CandleAggregator.stop();
+
+    // Disconnect from Market Depth
+    MarketDepthManager.disconnect();
 
     // Disconnect from Dhan
     DhanWebSocketManager.disconnect();
