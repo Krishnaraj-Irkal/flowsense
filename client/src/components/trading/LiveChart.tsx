@@ -64,7 +64,7 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
       borderVisible: false,
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350'
-    } as any);
+    });
 
     // Add volume histogram series (v5 API)
     const volumeSeries = chart.addSeries({
@@ -74,7 +74,7 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
         type: 'volume'
       },
       priceScaleId: ''
-    } as any);
+    });
 
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries;
