@@ -11,7 +11,14 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { createChart, IChartApi, CandlestickData, Time } from 'lightweight-charts';
+import {
+  createChart,
+  IChartApi,
+  CandlestickData,
+  Time,
+  CandlestickSeries,
+  HistogramSeries
+} from 'lightweight-charts';
 import { Candle, Position } from '../../services/marketDataService';
 import '../../styles/trading.css';
 
@@ -56,9 +63,8 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
       }
     });
 
-    // Add candlestick series (v5 API)
-    const candleSeries = chart.addSeries({
-      type: 'Candlestick',
+    // Add candlestick series (v5 API - pass series class as first parameter)
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
@@ -67,8 +73,7 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
     });
 
     // Add volume histogram series (v5 API)
-    const volumeSeries = chart.addSeries({
-      type: 'Histogram',
+    const volumeSeries = chart.addSeries(HistogramSeries, {
       color: '#26a69a',
       priceFormat: {
         type: 'volume'
