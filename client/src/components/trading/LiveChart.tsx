@@ -10,8 +10,8 @@
  * - Stop loss and target markers for open positions
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
+import React, { useEffect, useRef } from 'react';
+import { createChart, IChartApi, CandlestickData, Time } from 'lightweight-charts';
 import { Candle, Position } from '../../services/marketDataService';
 import '../../styles/trading.css';
 
@@ -25,8 +25,8 @@ interface LiveChartProps {
 const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onIntervalChange }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
 
   // Initialize chart
   useEffect(() => {
@@ -56,26 +56,25 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
       }
     });
 
-    // Use the correct v5 API - addSeries with class
-    const candleSeries = chart.addSeries(CandlestickSeries, {
+    // Add candlestick series (v5 API)
+    const candleSeries = chart.addSeries({
+      type: 'Candlestick',
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350'
-    });
+    } as any);
 
-    const volumeSeries = chart.addSeries(HistogramSeries, {
+    // Add volume histogram series (v5 API)
+    const volumeSeries = chart.addSeries({
+      type: 'Histogram',
       color: '#26a69a',
       priceFormat: {
         type: 'volume'
       },
-      priceScaleId: '',
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0
-      }
-    });
+      priceScaleId: ''
+    } as any);
 
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries;
@@ -102,38 +101,65 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current || candles.length === 0) return;
 
-    // Convert candles to chart format
-    const candleData: CandlestickData[] = candles.map((candle) => ({
-      time: (new Date(candle.timestamp).getTime() / 1000) as Time,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close
-    }));
+    try {
+      // Convert candles to chart format with proper timestamp handling
+      const candleData: CandlestickData[] = candles
+        .map((candle) => {
+          // Handle both Date objects and timestamp strings
+          const timestamp = candle.timestamp instanceof Date
+            ? candle.timestamp.getTime()
+            : new Date(candle.timestamp).getTime();
 
-    const volumeData = candles.map((candle) => ({
-      time: (new Date(candle.timestamp).getTime() / 1000) as Time,
-      value: candle.volume,
-      color: candle.close >= candle.open ? '#26a69a80' : '#ef535080'
-    }));
+          // Convert to UTC timestamp in seconds (lightweight-charts requirement)
+          const utcTimestamp = Math.floor(timestamp / 1000);
 
-    candleSeriesRef.current.setData(candleData);
-    volumeSeriesRef.current.setData(volumeData);
+          return {
+            time: utcTimestamp as Time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close
+          };
+        })
+        .filter((data) => !isNaN(data.time as number)); // Filter out invalid timestamps
 
-    // Add markers for positions
-    if (positions.length > 0 && candleData.length > 0) {
-      const markers = positions.map((position) => {
-        const lastTime = candleData[candleData.length - 1].time;
-        return {
-          time: lastTime,
-          position: position.side === 'LONG' ? 'belowBar' : 'aboveBar',
-          color: position.side === 'LONG' ? '#26a69a' : '#ef5350',
-          shape: position.side === 'LONG' ? 'arrowUp' : 'arrowDown',
-          text: `${position.side} @ ₹${position.entryPrice.toFixed(2)}`
-        };
-      });
+      const volumeData = candles
+        .map((candle) => {
+          const timestamp = candle.timestamp instanceof Date
+            ? candle.timestamp.getTime()
+            : new Date(candle.timestamp).getTime();
+          const utcTimestamp = Math.floor(timestamp / 1000);
 
-      candleSeriesRef.current.setMarkers(markers as any);
+          return {
+            time: utcTimestamp as Time,
+            value: candle.volume,
+            color: candle.close >= candle.open ? '#26a69a80' : '#ef535080'
+          };
+        })
+        .filter((data) => !isNaN(data.time as number));
+
+      if (candleData.length === 0) return;
+
+      candleSeriesRef.current.setData(candleData);
+      volumeSeriesRef.current.setData(volumeData);
+
+      // Add markers for positions
+      if (positions.length > 0) {
+        const markers = positions.map((position) => {
+          const lastTime = candleData[candleData.length - 1].time;
+          return {
+            time: lastTime,
+            position: (position.side === 'LONG' ? 'belowBar' : 'aboveBar') as 'belowBar' | 'aboveBar',
+            color: position.side === 'LONG' ? '#26a69a' : '#ef5350',
+            shape: (position.side === 'LONG' ? 'arrowUp' : 'arrowDown') as 'arrowUp' | 'arrowDown',
+            text: `${position.side} @ ₹${position.entryPrice.toFixed(2)}`
+          };
+        });
+
+        candleSeriesRef.current.setMarkers(markers);
+      }
+    } catch (error) {
+      console.error('[LiveChart] Error updating chart data:', error);
     }
   }, [candles, positions]);
 

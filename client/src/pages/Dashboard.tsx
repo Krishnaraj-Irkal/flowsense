@@ -17,6 +17,7 @@ import PortfolioCard from '../components/trading/PortfolioCard';
 import PositionsList from '../components/trading/PositionsList';
 import StrategyStatus from '../components/trading/StrategyStatus';
 import LiveChart from '../components/trading/LiveChart';
+import AccumulationPanel from '../components/trading/AccumulationPanel';
 import axios from 'axios';
 import './Dashboard.css';
 
@@ -173,7 +174,7 @@ const Dashboard: React.FC = () => {
               <PositionsList positions={openPositions} />
             </div>
 
-            {/* Middle Column - Chart */}
+            {/* Middle Column - Chart & Accumulation */}
             <div className="dashboard-main-content">
               <LiveChart
                 candles={selectedCandles}
@@ -181,6 +182,7 @@ const Dashboard: React.FC = () => {
                 interval={chartInterval}
                 onIntervalChange={setChartInterval}
               />
+              <AccumulationPanel />
             </div>
 
             {/* Right Column - Strategy Status */}
