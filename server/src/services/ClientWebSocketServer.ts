@@ -19,6 +19,8 @@ import DhanWebSocketManager from './DhanWebSocketManager';
 import CandleAggregator from './CandleAggregator';
 import StrategyEngine from './StrategyEngine';
 import PaperTradingEngine from './PaperTradingEngine';
+import AccumulationAnalyzer from './AccumulationAnalyzer';
+import MarketDepthManager from './MarketDepthManager';
 import PortfolioModel from '../models/Portfolio';
 
 class ClientWebSocketServer {
@@ -49,6 +51,9 @@ class ClientWebSocketServer {
 
     // Subscribe to backend events
     this.subscribeToBackendEvents();
+
+    // Start accumulation analysis
+    AccumulationAnalyzer.start();
 
     console.log('[ClientWebSocketServer] Socket.IO server initialized');
   }
@@ -201,6 +206,18 @@ class ClientWebSocketServer {
       // Send updated strategies status
       const strategies = StrategyEngine.getStatus();
       this.broadcast('signals', 'strategies:status', strategies);
+    });
+
+    // Accumulation reports (every 1 minute)
+    AccumulationAnalyzer.on('accumulation:report', (report) => {
+      if (this.io) {
+        this.io.emit('accumulation:report', report);
+      }
+    });
+
+    // Feed depth data to accumulation analyzer
+    MarketDepthManager.on('depth', (depth) => {
+      AccumulationAnalyzer.recordDepthData(depth.securityId, depth);
     });
 
     console.log('[ClientWebSocketServer] Subscribed to backend events');

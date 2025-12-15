@@ -152,7 +152,6 @@ export const MarketDataProvider: React.FC<MarketDataProviderProps> = ({ children
 
     // Tick updates
     const handleTick = (data: Tick) => {
-      console.log(`[MarketDataContext] 📊 Tick received for ${data.securityId}: LTP ₹${data.ltp}`);
       setLatestTick(data);
     };
 

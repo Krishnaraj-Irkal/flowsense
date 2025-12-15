@@ -178,7 +178,6 @@ class MarketDataService {
 
     // Tick updates
     this.socket.on('tick', (data: Tick) => {
-      console.log(`[MarketDataService] Received tick:`, data);
       this.emit('tick', data);
     });
 
