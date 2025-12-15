@@ -126,7 +126,8 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
             close: candle.close
           };
         })
-        .filter((data) => !isNaN(data.time as number)); // Filter out invalid timestamps
+        .filter((data) => !isNaN(data.time as number)) // Filter out invalid timestamps
+        .sort((a, b) => (a.time as number) - (b.time as number)); // Sort by time ascending (REQUIRED by lightweight-charts)
 
       const volumeData = candles
         .map((candle) => {
@@ -141,7 +142,8 @@ const LiveChart: React.FC<LiveChartProps> = ({ candles, positions, interval, onI
             color: candle.close >= candle.open ? '#26a69a80' : '#ef535080'
           };
         })
-        .filter((data) => !isNaN(data.time as number));
+        .filter((data) => !isNaN(data.time as number))
+        .sort((a, b) => (a.time as number) - (b.time as number)); // Sort by time ascending
 
       if (candleData.length === 0) return;
 
